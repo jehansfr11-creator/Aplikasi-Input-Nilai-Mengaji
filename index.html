@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Penilaian Mengaji Harian</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --primary: #1b4332; --primary-light: #2d6a4f; --bg: #f4f7f6; --card-bg: #ffffff; --text: #2c3e50; --border: #e2e8f0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 20px 25px; border-radius: 12px; margin-bottom: 20px; }
+        header h1 { font-size: 22px; font-weight: 600; }
+        .flex-container { display: flex; gap: 20px; margin-bottom: 20px; }
+        @media (max-width: 768px) { .flex-container { flex-direction: column; } }
+        .card { background: var(--card-bg); border: 1px solid var(--border); padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; }
+        .card-left { flex: 1; } .card-right { flex: 2; }
+        h3 { font-size: 16px; color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid #e8f5e9; padding-bottom: 8px; }
+        .form-group { margin-bottom: 12px; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #4a5568; }
+        input, select, textarea { width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+        .btn { background-color: var(--primary); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .btn:hover { background-color: var(--primary-light); }
+        .btn-block { width: 100%; }
+        .upload-area { background-color: #f0fdf4; border: 2px dashed #86efac; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        th, td { border: 1px solid var(--border); padding: 9px; text-align: left; }
+        th { background-color: #f8fafc; color: #475569; }
+        .badge { padding: 3px 8px; border-radius: 12px; color: white; font-weight: 600; font-size: 11px; }
+        .badge-tilawati { background-color: #0284c7; } .badge-tahfidz { background-color: #7c3aed; }
+        .table-scroll { max-height: 250px; overflow-y: auto; display: block; }
+        #loadingStatus { background: #fef08a; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; text-align: center; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Aplikasi Penilaian Mengaji Harian</h1>
+        <p>Terhubung Terpusat ke Google Sheets Lembaga</p>
+    </header>
+
+    <div id="loadingStatus">🔄 Mengambil/Menyimpan data ke Google Sheets...</div>
+
+    <!-- UPLOAD & KELOLA SANTRI -->
+    <div class="card">
+        <h3>1. Upload & Kelola Data Santri Pusat</h3>
+        <div class="upload-area">
+            <label>📂 Upload File Spreadsheet (Excel / CSV):</label>
+            <input type="file" id="excelFile" accept=".xlsx, .xls, .csv">
+        </div>
+        <b id="santriCount">Daftar Santri Terdaftar (0 anak)</b>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr><th>No</th><th>Nama Lengkap</th><th>Nama Panggilan</th><th>Kelas</th></tr>
+                </thead>
+                <tbody id="tabelSantri"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="flex-container">
+        <!-- TAMBAH SANTRI MANUAL -->
+        <div class="card card-left">
+            <h3>Tambah Santri Manual</h3>
+            <form id="formSiswa">
+                <div class="form-group"><label>Nama Lengkap:</label><input type="text" id="namaLengkap" required></div>
+                <div class="form-group"><label>Nama Panggilan:</label><input type="text" id="namaPanggilan" required></div>
+                <div class="form-group"><label>Kelas:</label><input type="text" id="kelas" required></div>
+                <button type="submit" class="btn btn-block">Simpan ke Google Sheets</button>
+            </form>
+        </div>
+
+        <!-- INPUT NILAI HARIAN -->
+        <div class="card card-right">
+            <h3>2. Input Nilai Harian</h3>
+            <form id="formNilai">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Cari Nama Santri:</label>
+                        <input type="text" id="cariSantriInput" list="daftarSantriAuto" placeholder="Ketik nama santri..." autocomplete="off" required>
+                        <datalist id="daftarSantriAuto"></datalist>
+                    </div>
+                    <div class="form-group"><label>Tanggal:</label><input type="date" id="tanggal" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Kategori:</label>
+                        <select id="kategori" required>
+                            <option value="Tilawati">Tilawati</option>
+                            <option value="Tahfidz">Tahfidz</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Materi / Ayat:</label><input type="text" id="materi" placeholder="Jilid 3 Hal 12" required></div>
+                    <div class="form-group"><label>Nilai:</label><input type="text" id="nilai" placeholder="Lancar / A" required></div>
+                </div>
+                <div class="form-group"><label>Nama Guru:</label><input type="text" id="namaGuru" required></div>
+                <div class="form-group"><label>Catatan Guru:</label><textarea id="catatanGuru" rows="2"></textarea></div>
+                <button type="submit" class="btn btn-block">Kirim Nilai Harian</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- RIWAYAT NILAI -->
+    <div class="card">
+        <h3>3. Riwayat Nilai Real-time Terpusat</h3>
+        <div class="table-scroll" style="max-height: 400px;">
+            <table>
+                <thead>
+                    <tr><th>Tanggal</th><th>Nama Santri (Kelas)</th><th>Kategori</th><th>Materi</th><th>Nilai</th><th>Catatan</th><th>Guru</th></tr>
+                </thead>
+                <tbody id="tabelNilai"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // PASTA LINK GOOGLE APPS SCRIPT KAMU DI SINI:
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxClb1T4tIT5i-3O2alLgmneFMOy2oKP-FmPRd5XmMH2GJjAZamgqFQ3yAQcHW_wf8S/exec";
+
+    let dataSiswa = [];
+    let dataNilai = [];
+
+    document.getElementById('tanggal').valueAsDate = new Date();
+
+    function showLoading(show) {
+        document.getElementById('loadingStatus').style.display = show ? 'block' : 'none';
+    }
+
+    // LOAD DATA DARI GOOGLE SHEETS
+    function loadDataPusat() {
+        showLoading(true);
+        fetch(SCRIPT_URL)
+            .then(res => res.json())
+            .then(data => {
+                dataSiswa = data.santri || [];
+                dataNilai = data.nilai || [];
+                updateUI();
+                showLoading(false);
+            })
+            .catch(err => {
+                showLoading(false);
+                alert('Gagal mengambil data dari Google Sheets!');
+            });
+    }
+
+    function updateUI() {
+        // Render Tabel Santri
+        document.getElementById('santriCount').innerText = `Daftar Santri Terdaftar (${dataSiswa.length} anak)`;
+        const tabelSantri = document.getElementById('tabelSantri');
+        tabelSantri.innerHTML = '';
+        dataSiswa.forEach((s, idx) => {
+            tabelSantri.innerHTML += `<tr><td>${idx+1}</td><td>${s.namaLengkap}</td><td><b>${s.namaPanggilan}</b></td><td>${s.kelas}</td></tr>`;
+        });
+
+        // Datalist Auto-Complete
+        const datalist = document.getElementById('daftarSantriAuto');
+        datalist.innerHTML = '';
+        dataSiswa.forEach(s => {
+            datalist.innerHTML += `<option value="${s.namaPanggilan} - ${s.kelas}">[${s.namaLengkap}]</option>`;
+        });
+
+        // Render Tabel Nilai
+        const tabelNilai = document.getElementById('tabelNilai');
+        tabelNilai.innerHTML = '';
+        dataNilai.slice().reverse().forEach(n => {
+            const badgeClass = n.kategori === 'Tilawati' ? 'badge-tilawati' : 'badge-tahfidz';
+            tabelNilai.innerHTML += `
+                <tr>
+                    <td>${n.tanggal}</td>
+                    <td><b>${n.namaPanggilan}</b> (${n.kelas})</td>
+                    <td><span class="badge ${badgeClass}">${n.kategori}</span></td>
+                    <td>${n.materi}</td>
+                    <td><b>${n.nilai}</b></td>
+                    <td>${n.catatan || '-'}</td>
+                    <td>${n.namaGuru}</td>
+                </tr>
+            `;
+        });
+    }
+
+    // SIMPAN SANTRI MANUAL
+    document.getElementById('formSiswa').addEventListener('submit', function(e) {
+        e.preventDefault();
+        showLoading(true);
+        const payload = {
+            action: "simpanSantri",
+            namaLengkap: document.getElementById('namaLengkap').value,
+            namaPanggilan: document.getElementById('namaPanggilan').value,
+            kelas: document.getElementById('kelas').value
+        };
+        
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+            .then(() => {
+                document.getElementById('formSiswa').reset();
+                loadDataPusat();
+            });
+    });
+
+    // UPLOAD EXCEL BATCH
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+            let batch = [];
+            jsonData.forEach(row => {
+                const namaLengkap = row['Nama Lengkap'] || row['Nama'];
+                const namaPanggilan = row['Nama Panggilan'] || row['Panggilan'] || namaLengkap;
+                const kelas = row['Kelas'] || 'Umum';
+                if(namaLengkap) batch.push({ namaLengkap, namaPanggilan, kelas });
+            });
+
+            if(batch.length > 0) {
+                showLoading(true);
+                fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "uploadBatchSantri", list: batch }) })
+                    .then(() => {
+                        e.target.value = '';
+                        loadDataPusat();
+                    });
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // SIMPAN NILAI HARIAN
+    document.getElementById('formNilai').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const inputVal = document.getElementById('cariSantriInput').value;
+        let santri = dataSiswa.find(s => `${s.namaPanggilan} - ${s.kelas}` === inputVal) || 
+                     dataSiswa.find(s => s.namaPanggilan.toLowerCase() === inputVal.toLowerCase());
+
+        if (!santri) {
+            alert('Santri tidak ditemukan! Pilih dari daftar rekomendasi.');
+            return;
+        }
+
+        showLoading(true);
+        const payload = {
+            action: "simpanNilai",
+            tanggal: document.getElementById('tanggal').value,
+            namaPanggilan: santri.namaPanggilan,
+            kelas: santri.kelas,
+            kategori: document.getElementById('kategori').value,
+            materi: document.getElementById('materi').value,
+            nilai: document.getElementById('nilai').value,
+            catatan: document.getElementById('catatanGuru').value,
+            namaGuru: document.getElementById('namaGuru').value
+        };
+
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+            .then(() => {
+                document.getElementById('materi').value = '';
+                document.getElementById('nilai').value = '';
+                document.getElementById('catatanGuru').value = '';
+                document.getElementById('cariSantriInput').value = '';
+                loadDataPusat();
+            });
+    });
+
+    // Jalankan saat pertama dibuka
+    loadDataPusat();
+</script>
+</body>
+</html>
