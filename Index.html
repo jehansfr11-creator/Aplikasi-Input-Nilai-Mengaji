@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Penilaian Mengaji Harian</title>
+    <!-- Library Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #1b4332;
+            --primary-light: #2d6a4f;
+            --accent: #52b788;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; }
+        
+        .container { max-width: 1100px; margin: 0 auto; }
+        
+        header { 
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white; 
+            padding: 20px 25px; 
+            border-radius: 12px; 
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        header h1 { font-size: 22px; font-weight: 600; }
+        header p { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+
+        .flex-container { display: flex; gap: 20px; margin-bottom: 20px; }
+        @media (max-width: 768px) { .flex-container { flex-direction: column; } }
+
+        .card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border); 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+        }
+        
+        .card-left { flex: 1; }
+        .card-right { flex: 2; }
+
+        h3 { font-size: 16px; color: var(--primary); margin-bottom: 15px; border-bottom: 2px solid #e8f5e9; padding-bottom: 8px; }
+
+        .form-group { margin-bottom: 12px; position: relative; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; color: #4a5568; }
+        input, select, textarea { 
+            width: 100%; 
+            padding: 9px 12px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 6px; 
+            font-family: inherit; 
+            font-size: 13px;
+        }
+
+        .btn { 
+            background-color: var(--primary); 
+            color: white; 
+            padding: 8px 12px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 13px; 
+            font-weight: 600;
+        }
+        .btn:hover { background-color: var(--primary-light); }
+        .btn-block { width: 100%; }
+        .btn-excel { background-color: #217346; }
+        .btn-excel:hover { background-color: #1e6b41; }
+        .btn-warning { background-color: #d97706; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        .btn-warning:hover { background-color: #b45309; }
+        .btn-danger { background-color: #e53e3e; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        .btn-danger:hover { background-color: #c53030; }
+
+        .upload-area {
+            background-color: #f0fdf4;
+            border: 2px dashed #86efac;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .export-box {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        th, td { border: 1px solid var(--border); padding: 9px; text-align: left; }
+        th { background-color: #f8fafc; color: #475569; font-weight: 600; }
+
+        .badge { padding: 3px 8px; border-radius: 12px; color: white; font-weight: 600; font-size: 11px; display: inline-block; }
+        .badge-tilawati { background-color: #0284c7; }
+        .badge-tahfidz { background-color: #7c3aed; }
+        
+        .table-scroll { max-height: 250px; overflow-y: auto; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Aplikasi Penilaian Mengaji Harian</h1>
+        <p>Kelola data santri, catat perkembangan harian, serta unduh rekap bulanan.</p>
+    </header>
+
+    <!-- KOTAK KHUSUS UPLOAD & KELOLA DATA SANTRI -->
+    <div class="card">
+        <h3>1. Upload & Kelola Data Santri</h3>
+        <div class="upload-area">
+            <label>📂 Pilih File Spreadsheet (Excel / CSV):</label>
+            <input type="file" id="excelFile" accept=".xlsx, .xls, .csv">
+            <p style="font-size:11px; color:#475569; margin-top:6px;">
+                *Pastikan judul kolom di baris pertama file Excel memuat kata: <b>Nama Lengkap</b>, <b>Nama Panggilan</b>, dan <b>Kelas</b>.
+            </p>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+            <b id="santriCount">Daftar Santri Terdaftar (0 anak)</b>
+            <button onclick="hapusSemuaSantri()" class="btn btn-danger">Hapus Semua Santri</button>
+        </div>
+
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Nama Lengkap</th>
+                        <th>Nama Panggilan</th>
+                        <th>Kelas</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelSantri">
+                    <!-- Data Santri Muncul Di Sini -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="flex-container">
+        <!-- Form Tambah Santri Manual -->
+        <div class="card card-left" style="margin-bottom:0;">
+            <h3>Tambah Santri Manual</h3>
+            <form id="formSiswa">
+                <div class="form-group">
+                    <label>Nama Lengkap:</label>
+                    <input type="text" id="namaLengkap" required>
+                </div>
+                <div class="form-group">
+                    <label>Nama Panggilan:</label>
+                    <input type="text" id="namaPanggilan" required>
+                </div>
+                <div class="form-group">
+                    <label>Kelas:</label>
+                    <input type="text" id="kelas" required>
+                </div>
+                <button type="submit" class="btn btn-block">Simpan Santri Manual</button>
+            </form>
+        </div>
+
+        <!-- Form Input Nilai Harian -->
+        <div class="card card-right" style="margin-bottom:0;">
+            <h3>2. Input Nilai Harian</h3>
+            <form id="formNilai">
+                <div class="form-row">
+                    <!-- CARI NAMA SISWA TANPA DROPDOWN KAKU (AUTOCOMPLETE) -->
+                    <div class="form-group">
+                        <label>Cari Nama Santri:</label>
+                        <input type="text" id="cariSantriInput" list="daftarSantriAuto" placeholder="Ketik nama panggilan/lengkap..." autocomplete="off" required>
+                        <datalist id="daftarSantriAuto">
+                            <!-- Rekomendasi nama santri akan otomatis muncul di sini -->
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Tanggal:</label>
+                        <input type="date" id="tanggal" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Kategori:</label>
+                        <select id="kategori" required>
+                            <option value="Tilawati">Tilawati</option>
+                            <option value="Tahfidz">Tahfidz</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Jilid / Surat-Ayat:</label>
+                        <input type="text" id="materi" placeholder="Cth: Jilid 3 Hal 12 / An-Naba: 1-10" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nilai / Predikat:</label>
+                        <input type="text" id="nilai" placeholder="Cth: A / Lancar" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nama Guru Pengajar:</label>
+                        <input type="text" id="namaGuru" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Catatan Guru:</label>
+                    <textarea id="catatanGuru" rows="2"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-block">Simpan Nilai Harian</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Area Export Excel Bulanan & Tabel Nilai -->
+    <div class="card">
+        <h3>3. Download Laporan & Riwayat Nilai</h3>
+        <div class="export-box">
+            <div class="form-group" style="margin-bottom:0; flex:1;">
+                <label>Pilih Bulan & Tahun:</label>
+                <input type="month" id="filterBulan">
+            </div>
+            <div class="form-group" style="margin-bottom:0; flex:1;">
+                <label>Filter Kelas:</label>
+                <select id="filterKelas">
+                    <option value="SEMUA">-- Semua Kelas --</option>
+                </select>
+            </div>
+            <button onclick="downloadExcelBulanan()" class="btn btn-excel">
+                📊 Download Excel Bulanan
+            </button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Nama Santri (Kelas)</th>
+                    <th>Kategori</th>
+                    <th>Materi / Hafalan</th>
+                    <th>Nilai</th>
+                    <th>Catatan Guru</th>
+                    <th>Guru</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tabelNilai">
+                <!-- Data Nilai Muncul Di Sini -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let dataSiswa = JSON.parse(localStorage.getItem('dataSiswa')) || [];
+    let dataNilai = JSON.parse(localStorage.getItem('dataNilai')) || [];
+
+    const today = new Date();
+    document.getElementById('tanggal').valueAsDate = today;
+    document.getElementById('filterBulan').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+    function updateUI() {
+        const datalistSantri = document.getElementById('daftarSantriAuto');
+        const filterKelas = document.getElementById('filterKelas');
+        const tabelNilai = document.getElementById('tabelNilai');
+        const tabelSantri = document.getElementById('tabelSantri');
+        const santriCount = document.getElementById('santriCount');
+
+        // Render Tabel Data Santri
+        santriCount.innerText = `Daftar Santri Terdaftar (${dataSiswa.length} anak)`;
+        tabelSantri.innerHTML = '';
+        if (dataSiswa.length === 0) {
+            tabelSantri.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8;">Belum ada data santri. Silakan upload file Excel atau tambah manual.</td></tr>`;
+        } else {
+            dataSiswa.forEach((siswa, idx) => {
+                tabelSantri.innerHTML += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td>${siswa.namaLengkap}</td>
+                        <td><b>${siswa.namaPanggilan}</b></td>
+                        <td>${siswa.kelas}</td>
+                        <td>
+                            <button onclick="editSantri(${idx})" class="btn btn-warning">Edit</button>
+                            <button onclick="hapusSantri(${idx})" class="btn btn-danger">Hapus</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Render Datalist Pencarian Santri (Search Without Dropdown)
+        datalistSantri.innerHTML = '';
+        dataSiswa.forEach(siswa => {
+            datalistSantri.innerHTML += `<option value="${siswa.namaPanggilan} - ${siswa.kelas}">[${siswa.namaLengkap}]</option>`;
+        });
+
+        // Filter Kelas Dropdown
+        const kelasList = [...new Set(dataSiswa.map(s => s.kelas))];
+        filterKelas.innerHTML = '<option value="SEMUA">-- Semua Kelas --</option>';
+        kelasList.forEach(k => {
+            filterKelas.innerHTML += `<option value="${k}">${k}</option>`;
+        });
+
+        // Render Tabel Nilai Harian
+        tabelNilai.innerHTML = '';
+        if(dataNilai.length === 0) {
+            tabelNilai.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8;">Belum ada data nilai harian.</td></tr>`;
+        } else {
+            dataNilai.slice().reverse().forEach((item, index) => {
+                const originalIndex = dataNilai.length - 1 - index;
+                const badgeClass = item.kategori === 'Tilawati' ? 'badge-tilawati' : 'badge-tahfidz';
+                tabelNilai.innerHTML += `
+                    <tr>
+                        <td>${item.tanggal}</td>
+                        <td><b>${item.namaPanggilan}</b> <br><small style="color:#64748b;">(${item.kelas}) - ${item.namaLengkap || ''}</small></td>
+                        <td><span class="badge ${badgeClass}">${item.kategori}</span></td>
+                        <td>${item.materi}</td>
+                        <td><b>${item.nilai}</b></td>
+                        <td>${item.catatan || '-'}</td>
+                        <td>${item.namaGuru}</td>
+                        <td><button onclick="hapusNilai(${originalIndex})" class="btn btn-danger">Hapus</button></td>
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    // UPLOAD SPREADSHEET SANTRI
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                let added = 0;
+                jsonData.forEach(row => {
+                    const namaLengkap = row['Nama Lengkap'] || row['nama_lengkap'] || row['Nama'] || row['NAMA'];
+                    const namaPanggilan = row['Nama Panggilan'] || row['nama_panggilan'] || row['Panggilan'] || namaLengkap;
+                    const kelas = row['Kelas'] || row['kelas'] || row['KELAS'] || 'Umum';
+
+                    if (namaLengkap) {
+                        dataSiswa.push({
+                            namaLengkap: String(namaLengkap).trim(),
+                            namaPanggilan: String(namaPanggilan).trim(),
+                            kelas: String(kelas).trim()
+                        });
+                        added++;
+                    }
+                });
+
+                localStorage.setItem('dataSiswa', JSON.stringify(dataSiswa));
+                updateUI();
+                alert(`Berhasil menambahkan ${added} data santri dari spreadsheet!`);
+                e.target.value = '';
+            } catch (err) {
+                alert('Gagal membaca file spreadsheet. Pastikan format file .xlsx atau .csv');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // SIMPAN SANTRI MANUAL
+    document.getElementById('formSiswa').addEventListener('submit', function(e) {
+        e.preventDefault();
+        dataSiswa.push({
+            namaLengkap: document.getElementById('namaLengkap').value,
+            namaPanggilan: document.getElementById('namaPanggilan').value,
+            kelas: document.getElementById('kelas').value
+        });
+        localStorage.setItem('dataSiswa', JSON.stringify(dataSiswa));
+        this.reset();
+        updateUI();
+        alert('Data santri berhasil ditambahkan!');
+    });
+
+    // EDIT SANTRI
+    function editSantri(index) {
+        const santri = dataSiswa[index];
+        const namaLengkapBaru = prompt("Edit Nama Lengkap:", santri.namaLengkap);
+        if (namaLengkapBaru === null) return;
+
+        const namaPanggilanBaru = prompt("Edit Nama Panggilan:", santri.namaPanggilan);
+        if (namaPanggilanBaru === null) return;
+
+        const kelasBaru = prompt("Edit Kelas:", santri.kelas);
+        if (kelasBaru === null) return;
+
+        dataSiswa[index] = {
+            namaLengkap: namaLengkapBaru.trim(),
+            namaPanggilan: namaPanggilanBaru.trim(),
+            kelas: kelasBaru.trim()
+        };
+
+        localStorage.setItem('dataSiswa', JSON.stringify(dataSiswa));
+        updateUI();
+        alert('Data santri berhasil diubah!');
+    }
+
+    // HAPUS SATU SANTRI
+    function hapusSantri(index) {
+        if(confirm(`Yakin mau menghapus santri "${dataSiswa[index].namaPanggilan}"?`)) {
+            dataSiswa.splice(index, 1);
+            localStorage.setItem('dataSiswa', JSON.stringify(dataSiswa));
+            updateUI();
+        }
+    }
+
+    // HAPUS SEMUA SANTRI
+    function hapusSemuaSantri() {
+        if(confirm('Yakin ingin menghapus seluruh daftar santri?')) {
+            dataSiswa = [];
+            localStorage.setItem('dataSiswa', JSON.stringify(dataSiswa));
+            updateUI();
+        }
+    }
+
+    // SIMPAN NILAI HARIAN
+    document.getElementById('formNilai').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const inputVal = document.getElementById('cariSantriInput').value;
+        
+        // Cari data santri berdasarkan input teks
+        let santriSelected = dataSiswa.find(s => `${s.namaPanggilan} - ${s.kelas}` === inputVal) || 
+                             dataSiswa.find(s => s.namaPanggilan.toLowerCase() === inputVal.toLowerCase() || s.namaLengkap.toLowerCase() === inputVal.toLowerCase());
+
+        if (!santriSelected) {
+            alert('Santri tidak ditemukan! Silakan ketik nama santri dan pilih dari opsi yang tersedia.');
+            return;
+        }
+
+        dataNilai.push({
+            namaLengkap: santriSelected.namaLengkap,
+            namaPanggilan: santriSelected.namaPanggilan,
+            kelas: santriSelected.kelas,
+            tanggal: document.getElementById('tanggal').value,
+            kategori: document.getElementById('kategori').value,
+            materi: document.getElementById('materi').value,
+            nilai: document.getElementById('nilai').value,
+            catatan: document.getElementById('catatanGuru').value,
+            namaGuru: document.getElementById('namaGuru').value
+        });
+
+        localStorage.setItem('dataNilai', JSON.stringify(dataNilai));
+        document.getElementById('cariSantriInput').value = '';
+        document.getElementById('materi').value = '';
+        document.getElementById('nilai').value = '';
+        document.getElementById('catatanGuru').value = '';
+        updateUI();
+        alert('Nilai harian berhasil dicatat!');
+    });
+
+    // HAPUS NILAI
+    function hapusNilai(index) {
+        if(confirm('Hapus rincian nilai ini?')) {
+            dataNilai.splice(index, 1);
+            localStorage.setItem('dataNilai', JSON.stringify(dataNilai));
+            updateUI();
+        }
+    }
+
+    // DOWNLOAD EXCEL BULANAN
+    function downloadExcelBulanan() {
+        const bulanPilihan = document.getElementById('filterBulan').value;
+        const kelasPilihan = document.getElementById('filterKelas').value;
+
+        const filtered = dataNilai.filter(item => {
+            const matchBulan = item.tanggal.startsWith(bulanPilihan);
+            const matchKelas = (kelasPilihan === 'SEMUA') || (item.kelas === kelasPilihan);
+            return matchBulan && matchKelas;
+        });
+
+        if (filtered.length === 0) {
+            alert('Tidak ada data nilai pada bulan/kelas tersebut.');
+            return;
+        }
+
+        const dataExcel = filtered.map((item, idx) => ({
+            'No': idx + 1,
+            'Tanggal': item.tanggal,
+            'Nama Lengkap': item.namaLengkap || '-',
+            'Nama Panggilan': item.namaPanggilan,
+            'Kelas': item.kelas,
+            'Kategori': item.kategori,
+            'Materi / Ayat': item.materi,
+            'Nilai': item.nilai,
+            'Catatan Guru': item.catatan || '-',
+            'Guru': item.namaGuru
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataExcel);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Bulanan");
+        XLSX.writeFile(workbook, `Rekap_Mengaji_${bulanPilihan}.xlsx`);
+    }
+
+    updateUI();
+</script>
+
+</body>
+</html>
