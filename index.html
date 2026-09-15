@@ -202,36 +202,46 @@
             });
     });
 
-    // UPLOAD EXCEL BATCH
-    document.getElementById('excelFile').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+   // UPLOAD EXCEL BATCH (SERENTAK & CEPAT)
+document.getElementById('excelFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            const data = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-            let batch = [];
-            jsonData.forEach(row => {
-                const namaLengkap = row['Nama Lengkap'] || row['Nama'];
-                const namaPanggilan = row['Nama Panggilan'] || row['Panggilan'] || namaLengkap;
-                const kelas = row['Kelas'] || 'Umum';
-                if(namaLengkap) batch.push({ namaLengkap, namaPanggilan, kelas });
+        let batch = [];
+        jsonData.forEach(row => {
+            const namaLengkap = row['Nama Lengkap'] || row['Nama'] || row['nama_lengkap'];
+            const namaPanggilan = row['Nama Panggilan'] || row['Panggilan'] || namaLengkap;
+            const kelas = row['Kelas'] || row['kelas'] || 'Umum';
+            if(namaLengkap) batch.push({ namaLengkap, namaPanggilan, kelas });
+        });
+
+        if(batch.length > 0) {
+            showLoading(true);
+            // Mengirim seluruh array batch dalam 1 kali fetch
+            fetch(SCRIPT_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ action: "uploadBatchSantri", list: batch }) 
+            })
+            .then(res => res.json())
+            .then(() => {
+                alert(`Berhasil mengunggah ${batch.length} data santri!`);
+                e.target.value = '';
+                loadDataPusat();
+            })
+            .catch(err => {
+                showLoading(false);
+                alert('Gagal mengunggah data!');
             });
-
-            if(batch.length > 0) {
-                showLoading(true);
-                fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "uploadBatchSantri", list: batch }) })
-                    .then(() => {
-                        e.target.value = '';
-                        loadDataPusat();
-                    });
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    });
+        }
+    };
+    reader.readAsArrayBuffer(file);
+});
 
     // SIMPAN NILAI HARIAN
     document.getElementById('formNilai').addEventListener('submit', function(e) {
