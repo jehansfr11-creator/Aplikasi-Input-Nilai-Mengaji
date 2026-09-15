@@ -6,7 +6,14 @@
     <title>Aplikasi Penilaian Mengaji Harian</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --primary: #1b4332; --primary-light: #2d6a4f; --bg: #f4f7f6; --card-bg: #ffffff; --text: #2c3e50; --border: #e2e8f0; }
+        :root { 
+            --primary: #1b4332; 
+            --primary-light: #2d6a4f; 
+            --bg: #f4f7f6; 
+            --card-bg: #ffffff; 
+            --text: #2c3e50; 
+            --border: #e2e8f0; 
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); padding: 15px; }
         .container { max-width: 1100px; margin: 0 auto; }
@@ -16,7 +23,8 @@
         .flex-container { display: flex; gap: 20px; margin-bottom: 20px; }
         @media (max-width: 768px) { .flex-container { flex-direction: column; } }
         .card { background: var(--card-bg); border: 1px solid var(--border); padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 20px; }
-        .card-left { flex: 1; } .card-right { flex: 2; }
+        .card-left { flex: 1; } 
+        .card-right { flex: 2; }
         h3 { font-size: 15px; color: var(--primary); margin-bottom: 12px; border-bottom: 2px solid #e8f5e9; padding-bottom: 6px; }
         .form-group { margin-bottom: 12px; }
         .form-row { display: flex; gap: 10px; }
@@ -34,7 +42,8 @@
         th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
         th { background-color: #f8fafc; color: #475569; }
         .badge { padding: 3px 6px; border-radius: 10px; color: white; font-weight: 600; font-size: 10px; display: inline-block; }
-        .badge-tilawati { background-color: #0284c7; } .badge-tahfidz { background-color: #7c3aed; }
+        .badge-tilawati { background-color: #0284c7; } 
+        .badge-tahfidz { background-color: #7c3aed; }
         .table-scroll { max-height: 250px; overflow-y: auto; display: block; }
         #loadingStatus { background: #fef08a; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; text-align: center; display: none; }
     </style>
@@ -124,7 +133,7 @@
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8lhC82I9hep3UAUwTTgfnz-RPsla7oPjfqL_Abfu9sE-OHQ89ARtxaIkhJR0rEPYB/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYCtcL7lDKudfHcoDcikXV09r3vdzaOFK1MbzsVFQWhmCvk33ShJ82eqEvdaXfoWc1/exec";
 
     let dataSiswa = [];
     let dataNilai = [];
@@ -135,16 +144,22 @@
         document.getElementById('loadingStatus').style.display = show ? 'block' : 'none';
     }
 
-    // HELPER: Ambil Properti Santri (Mendukung Objek & Array)
+    // HELPER: Normalisasi data santri baik bertipe Object maupun Array
     function getSantriProp(s) {
-        let namaL = s.namaLengkap || (Array.isArray(s) ? s[0] : '') || '';
-        let namaP = s.namaPanggilan || (Array.isArray(s) ? s[1] : '') || namaL;
-        let kls = s.kelas || (Array.isArray(s) ? s[2] : '') || 'Umum';
+        if (!s) return { namaLengkap: '', namaPanggilan: '', kelas: 'Umum' };
+
+        if (Array.isArray(s)) {
+            return {
+                namaLengkap: String(s[0] || '').trim(),
+                namaPanggilan: String(s[1] || s[0] || '').trim(),
+                kelas: String(s[2] || 'Umum').trim()
+            };
+        }
 
         return {
-            namaLengkap: String(namaL).trim(),
-            namaPanggilan: String(namaP).trim(),
-            kelas: String(kls).trim()
+            namaLengkap: String(s.namaLengkap || s.nama || s[0] || '').trim(),
+            namaPanggilan: String(s.namaPanggilan || s.panggilan || s.namaLengkap || s[1] || '').trim(),
+            kelas: String(s.kelas || s[2] || 'Umum').trim()
         };
     }
 
@@ -156,7 +171,6 @@
             .then(res => res.json())
             .then(data => {
                 showLoading(false);
-                
                 dataSiswa = data.santri || [];
                 dataNilai = data.nilai || [];
 
@@ -185,7 +199,8 @@
         }
 
         santriList.forEach((rawSantri, index) => {
-            const sheetRowIndex = index + 1; 
+            // Baris 1 di Sheet adalah Header, maka index 0 array ada di baris 2 Sheet
+            const sheetRowIndex = index + 2; 
             const s = getSantriProp(rawSantri);
 
             const tr = document.createElement('tr');
@@ -217,22 +232,30 @@
         const sortedNilai = [...nilaiList].reverse();
 
         sortedNilai.forEach(n => {
-            const badgeClass = n.kategori === 'Tahfidz' ? 'badge-tahfidz' : 'badge-tilawati';
-            const tr = document.createElement('tr');
-            
-            let tglFormatted = n.tanggal;
-            if (n.tanggal && n.tanggal.includes('T')) {
-                tglFormatted = n.tanggal.split('T')[0];
+            let tgl = n.tanggal || n[0] || '-';
+            let nama = n.namaPanggilan || n[1] || '-';
+            let kelas = n.kelas || n[2] || '-';
+            let kat = n.kategori || n[3] || 'Tilawati';
+            let materi = n.materi || n[4] || '-';
+            let nilai = n.nilai || n[5] || '-';
+            let catatan = n.catatan || n[6] || '-';
+            let guru = n.namaGuru || n[7] || '-';
+
+            if (tgl.includes('T')) {
+                tgl = tgl.split('T')[0];
             }
 
+            const badgeClass = kat === 'Tahfidz' ? 'badge-tahfidz' : 'badge-tilawati';
+            const tr = document.createElement('tr');
+
             tr.innerHTML = `
-                <td>${tglFormatted}</td>
-                <td><b>${n.namaPanggilan || n[1]}</b> (${n.kelas || n[2]})</td>
-                <td><span class="badge ${badgeClass}">${n.kategori || n[3]}</span></td>
-                <td>${n.materi || n[4]}</td>
-                <td><b>${n.nilai || n[5]}</b></td>
-                <td>${n.catatan || n[6] || '-'}</td>
-                <td>${n.namaGuru || n[7]}</td>
+                <td>${tgl}</td>
+                <td><b>${nama}</b> (${kelas})</td>
+                <td><span class="badge ${badgeClass}">${kat}</span></td>
+                <td>${materi}</td>
+                <td><b>${nilai}</b></td>
+                <td>${catatan}</td>
+                <td>${guru}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -274,7 +297,10 @@
             document.getElementById('formSiswa').reset();
             loadDataPusat();
         })
-        .catch(err => alert("Gagal menyimpan santri: " + err.message));
+        .catch(err => {
+            showLoading(false);
+            alert("Gagal menyimpan santri: " + err.message);
+        });
     });
 
     // 6. EDIT SANTRI
@@ -303,7 +329,10 @@
             alert("Data santri berhasil diperbarui!");
             loadDataPusat();
         })
-        .catch(err => alert("Gagal mengedit data: " + err.message));
+        .catch(err => {
+            showLoading(false);
+            alert("Gagal mengedit data: " + err.message);
+        });
     }
 
     // 7. HAPUS SANTRI
@@ -323,7 +352,10 @@
                 alert("Data santri berhasil dihapus!");
                 loadDataPusat();
             })
-            .catch(err => alert("Gagal menghapus data: " + err.message));
+            .catch(err => {
+                showLoading(false);
+                alert("Gagal menghapus data: " + err.message);
+            });
         }
     }
 
@@ -373,8 +405,7 @@
                     e.target.value = '';
                     loadDataPusat();
                 })
-                .catch(err => {
-                    alert(`Proses unggah selesai. Memperbarui data...`);
+                .catch(() => {
                     e.target.value = '';
                     loadDataPusat();
                 });
@@ -387,7 +418,7 @@
         reader.readAsArrayBuffer(file);
     });
 
-    // 9. SIMPAN NILAI HARIAN (Dengan Pencarian Fleksibel untuk Ponsel)
+    // 9. SIMPAN NILAI HARIAN
     document.getElementById('formNilai').addEventListener('submit', function(e) {
         e.preventDefault();
         const inputVal = document.getElementById('cariSantriInput').value.trim().toLowerCase();
@@ -399,7 +430,6 @@
             const formatPanggilanKelas = `${s.namaPanggilan} - ${s.kelas}`.toLowerCase();
             const formatLengkapKelas = `${s.namaLengkap} - ${s.kelas}`.toLowerCase();
             
-            // Cocokkan dengan berbagai kemungkinan input dari pengguna/keyboard HP
             if (
                 formatPanggilanKelas === inputVal || 
                 formatLengkapKelas === inputVal ||
@@ -411,7 +441,6 @@
             }
         }
 
-        // Pencarian Cadangan (Jika pengguna hanya mengetik sebagian kata di HP)
         if (!targetSantri) {
             targetSantri = dataSiswa.map(getSantriProp).find(s => 
                 inputVal.includes(s.namaPanggilan.toLowerCase()) || 
@@ -449,11 +478,14 @@
             document.getElementById('cariSantriInput').value = '';
             loadDataPusat();
         })
-        .catch(err => alert("Gagal mengirim nilai: " + err.message));
+        .catch(err => {
+            showLoading(false);
+            alert("Gagal mengirim nilai: " + err.message);
+        });
     });
 
     // Otomatis muat data saat halaman terbuka
-    window.addEventListener('DOMContentLoaded', loadDataPusat);
+    window.addEventListener('load', loadDataPusat);
 </script>
 </body>
 </html>
