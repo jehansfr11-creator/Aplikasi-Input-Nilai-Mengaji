@@ -25,6 +25,8 @@
         .btn { background-color: var(--primary); color: white; padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
         .btn:hover { background-color: var(--primary-light); }
         .btn-block { width: 100%; }
+        .btn-edit { background-color: #eab308; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-right: 4px; }
+        .btn-hapus { background-color: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
         .upload-area { background-color: #f0fdf4; border: 2px dashed #86efac; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
         th, td { border: 1px solid var(--border); padding: 9px; text-align: left; }
@@ -56,7 +58,7 @@
         <div class="table-scroll">
             <table>
                 <thead>
-                    <tr><th>No</th><th>Nama Lengkap</th><th>Nama Panggilan</th><th>Kelas</th></tr>
+                    <tr><th>No</th><th>Nama Lengkap</th><th>Nama Panggilan</th><th>Kelas</th><th>Aksi</th></tr>
                 </thead>
                 <tbody id="tabelSantri"></tbody>
             </table>
@@ -120,7 +122,6 @@
 </div>
 
 <script>
-    // PASTA LINK GOOGLE APPS SCRIPT KAMU DI SINI:
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8lhC82I9hep3UAUwTTgfnz-RPsla7oPjfqL_Abfu9sE-OHQ89ARtxaIkhJR0rEPYB/exec";
 
     let dataSiswa = [];
@@ -132,177 +133,261 @@
         document.getElementById('loadingStatus').style.display = show ? 'block' : 'none';
     }
 
-    // LOAD DATA DARI GOOGLE SHEETS
-   function loadDataPusat() {
-    if (typeof showLoading === "function") showLoading(true);
+    // 1. MEMUAT DATA DARI GOOGLE SHEETS
+    function loadDataPusat() {
+        showLoading(true);
 
-    fetch(SCRIPT_URL)
-        .then(res => res.json())
-        .then(data => {
-            if (typeof showLoading === "function") showLoading(false);
+        fetch(SCRIPT_URL)
+            .then(res => res.json())
+            .then(data => {
+                showLoading(false);
+                
+                // Simpan ke variabel global
+                dataSiswa = data.santri || [];
+                dataNilai = data.nilai || [];
 
-            // Menampilkan data ke tabel Santri
-            if (data.santri && Array.isArray(data.santri)) {
-                renderTabelSantri(data.santri);
-            }
-        })
-        .catch(err => {
-            if (typeof showLoading === "function") showLoading(false);
-            console.error("Gagal mengambil data:", err);
+                // Render Komponen
+                renderTabelSantri(dataSiswa);
+                renderTabelNilai(dataNilai);
+                updateDatalistSantri(dataSiswa);
+            })
+            .catch(err => {
+                showLoading(false);
+                console.error("Gagal mengambil data:", err);
+            });
+    }
+
+    // 2. RENDER TABEL SANTRI
+    function renderTabelSantri(santriList) {
+        const tbody = document.getElementById('tabelSantri');
+        const countElem = document.getElementById('santriCount');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        if (countElem) countElem.innerText = `Daftar Santri Terdaftar (${santriList.length} anak)`;
+
+        if (santriList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Belum ada data santri</td></tr>';
+            return;
+        }
+
+        santriList.forEach((santri, index) => {
+            const sheetRowIndex = index + 1; 
+            const namaL = santri.namaLengkap || santri[0] || '';
+            const namaP = santri.namaPanggilan || santri[1] || '';
+            const kls = santri.kelas || santri[2] || '';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${namaL}</td>
+                <td>${namaP}</td>
+                <td>${kls}</td>
+                <td>
+                    <button onclick="editSantriPrompt('${namaL}', '${namaP}', '${kls}', ${sheetRowIndex})" class="btn-edit">Edit</button>
+                    <button onclick="hapusSantriProses('${namaP}', ${sheetRowIndex})" class="btn-hapus">Hapus</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
         });
-}
+    }
 
-   // Fungsi untuk merender/menampilkan data santri ke dalam tabel HTML
-function renderTabelSantri(dataSantri) {
-    const tbody = document.querySelector('#tabelSantri tbody'); // Sesuaikan ID tabel santri Anda
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
+    // 3. RENDER TABEL RIWAYAT NILAI
+    function renderTabelNilai(nilaiList) {
+        const tbody = document.getElementById('tabelNilai');
+        if (!tbody) return;
 
-    dataSantri.forEach((santri, index) => {
-        // rowIndex di Google Sheets adalah index array + 2 (karena baris 1 adalah Header)
-        const sheetRowIndex = index + 1; 
+        tbody.innerHTML = '';
+        if (nilaiList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Belum ada riwayat nilai</td></tr>';
+            return;
+        }
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${santri.namaLengkap || santri[0]}</td>
-            <td>${santri.namaPanggilan || santri[1]}</td>
-            <td>${santri.kelas || santri[2]}</td>
-            <td>
-                <button onclick="editSantriPrompt('${santri.namaLengkap || santri[0]}', '${santri.namaPanggilan || santri[1]}', '${santri.kelas || santri[2]}', ${sheetRowIndex})" class="btn-edit">Edit</button>
-                <button onclick="hapusSantriProses('${santri.namaPanggilan || santri[1]}', ${sheetRowIndex})" class="btn-hapus">Hapus</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
+        // Urutkan dari data nilai terbaru
+        const sortedNilai = [...nilaiList].reverse();
 
-// Fungsi Edit Santri
-function editSantriPrompt(namaLengkap, namaPanggilan, kelas, rowIndex) {
-    const baruLengkap = prompt("Nama Lengkap:", namaLengkap);
-    if (!baruLengkap) return;
-    const baruPanggilan = prompt("Nama Panggilan:", namaPanggilan);
-    if (!baruPanggilan) return;
-    const baruKelas = prompt("Kelas:", kelas);
-    if (!baruKelas) return;
+        sortedNilai.forEach(n => {
+            const badgeClass = n.kategori === 'Tahfidz' ? 'badge-tahfidz' : 'badge-tilawati';
+            const tr = document.createElement('tr');
+            
+            // Format tanggal (jika tanggal berupa string/Date ISO)
+            let tglFormatted = n.tanggal;
+            if (n.tanggal && n.tanggal.includes('T')) {
+                tglFormatted = n.tanggal.split('T')[0];
+            }
 
-    showLoading(true);
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-            action: "editSantri",
-            rowIndex: rowIndex,
-            oldPanggilan: namaPanggilan,
-            namaLengkap: baruLengkap,
-            namaPanggilan: baruPanggilan,
-            kelas: baruKelas
-        })
-    })
-    .then(() => {
-        alert("Data santri berhasil diperbarui!");
-        loadDataPusat();
-    })
-    .catch(err => alert("Gagal mengedit data: " + err.message));
-}
+            tr.innerHTML = `
+                <td>${tglFormatted}</td>
+                <td><b>${n.namaPanggilan}</b> (${n.kelas})</td>
+                <td><span class="badge ${badgeClass}">${n.kategori}</span></td>
+                <td>${n.materi}</td>
+                <td><b>${n.nilai}</b></td>
+                <td>${n.catatan || '-'}</td>
+                <td>${n.namaGuru}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
 
-// Fungsi Hapus Santri
-function hapusSantriProses(namaPanggilan, rowIndex) {
-    if (confirm(`Apakah Anda yakin ingin menghapus data santri "${namaPanggilan}"?`)) {
+    // 4. UPDATE DROPDOWN / AUTOCMPLETE SANTRI
+    function updateDatalistSantri(santriList) {
+        const datalist = document.getElementById('daftarSantriAuto');
+        if (!datalist) return;
+        datalist.innerHTML = '';
+        
+        santriList.forEach(s => {
+            const option = document.createElement('option');
+            option.value = `${s.namaPanggilan} - ${s.kelas}`;
+            datalist.appendChild(option);
+        });
+    }
+
+    // 5. TAMBAH SANTRI MANUAL
+    document.getElementById('formSiswa').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const namaL = document.getElementById('namaLengkap').value;
+        const namaP = document.getElementById('namaPanggilan').value;
+        const kls = document.getElementById('kelas').value;
+
         showLoading(true);
         fetch(SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({
-                action: "hapusSantri",
-                rowIndex: rowIndex,
-                namaPanggilan: namaPanggilan
+                action: "simpanSantri",
+                namaLengkap: namaL,
+                namaPanggilan: namaP,
+                kelas: kls
             })
         })
         .then(() => {
-            alert("Data santri berhasil dihapus!");
+            document.getElementById('formSiswa').reset();
             loadDataPusat();
         })
-        .catch(err => alert("Gagal menghapus data: " + err.message));
+        .catch(err => alert("Gagal menyimpan santri: " + err.message));
+    });
+
+    // 6. EDIT SANTRI
+    function editSantriPrompt(namaLengkap, namaPanggilan, kelas, rowIndex) {
+        const baruLengkap = prompt("Nama Lengkap:", namaLengkap);
+        if (!baruLengkap) return;
+        const baruPanggilan = prompt("Nama Panggilan:", namaPanggilan);
+        if (!baruPanggilan) return;
+        const baruKelas = prompt("Kelas:", kelas);
+        if (!baruKelas) return;
+
+        showLoading(true);
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: "editSantri",
+                rowIndex: rowIndex,
+                oldPanggilan: namaPanggilan,
+                namaLengkap: baruLengkap,
+                namaPanggilan: baruPanggilan,
+                kelas: baruKelas
+            })
+        })
+        .then(() => {
+            alert("Data santri berhasil diperbarui!");
+            loadDataPusat();
+        })
+        .catch(err => alert("Gagal mengedit data: " + err.message));
     }
-}
 
- // UPLOAD EXCEL BATCH Fleksibel
-document.getElementById('excelFile').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-        try {
-            const data = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-            let batch = [];
-            jsonData.forEach(row => {
-                // Deteksi berbagai kemungkinan penulisan kolom di Excel
-                const namaLengkap = row['Nama Lengkap'] || row['Nama'] || row['nama_lengkap'] || row['NAMA LENGKAP'] || '';
-                const namaPanggilan = row['Nama Panggilan'] || row['Panggilan'] || row['nama_panggilan'] || row['NAMA PANGGILAN'] || namaLengkap;
-                const kelas = row['Kelas'] || row['kelas'] || row['KELAS'] || 'Umum';
-                
-                if (namaLengkap !== '') {
-                    batch.push({
-                        namaLengkap: String(namaLengkap).trim(),
-                        namaPanggilan: String(namaPanggilan).trim(),
-                        kelas: String(kelas).trim()
-                    });
-                }
-            });
-
-            if (batch.length === 0) {
-                alert('Data tidak terbaca! Pastikan file Excel memuat kolom "Nama Lengkap" atau "Nama".');
-                e.target.value = '';
-                return;
-            }
-
-            if (typeof showLoading === "function") showLoading(true);
-
-            // Mengirim data ke Apps Script
-            fetch(SCRIPT_URL, { 
+    // 7. HAPUS SANTRI
+    function hapusSantriProses(namaPanggilan, rowIndex) {
+        if (confirm(`Apakah Anda yakin ingin menghapus data santri "${namaPanggilan}"?`)) {
+            showLoading(true);
+            fetch(SCRIPT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: "uploadBatchSantri", list: batch }) 
+                body: JSON.stringify({
+                    action: "hapusSantri",
+                    rowIndex: rowIndex,
+                    namaPanggilan: namaPanggilan
+                })
             })
-            .then(res => res.json())
-            .then(resData => {
-                if (typeof showLoading === "function") showLoading(false);
-                alert(`Berhasil mengunggah ${batch.length} data santri!`);
-                e.target.value = '';
-                if (typeof loadDataPusat === "function") loadDataPusat();
+            .then(() => {
+                alert("Data santri berhasil dihapus!");
+                loadDataPusat();
             })
-            .catch(err => {
-                // Fallback jika response JSON terhalang CORS saat status ok
-                if (typeof showLoading === "function") showLoading(false);
-                alert(`Proses unggah selesai (${batch.length} data terproses). Memperbarui tabel...`);
-                e.target.value = '';
-                if (typeof loadDataPusat === "function") loadDataPusat();
-            });
-
-        } catch (err) {
-            if (typeof showLoading === "function") showLoading(false);
-            alert('Format file Excel salah atau file rusak: ' + err.message);
+            .catch(err => alert("Gagal menghapus data: " + err.message));
         }
-    };
-    reader.readAsArrayBuffer(file);
-});
+    }
 
-    // SIMPAN NILAI HARIAN
+    // 8. UPLOAD BATCH EXCEL
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                let batch = [];
+                jsonData.forEach(row => {
+                    const namaLengkap = row['Nama Lengkap'] || row['Nama'] || row['nama_lengkap'] || row['NAMA LENGKAP'] || '';
+                    const namaPanggilan = row['Nama Panggilan'] || row['Panggilan'] || row['nama_panggilan'] || row['NAMA PANGGILAN'] || namaLengkap;
+                    const kelas = row['Kelas'] || row['kelas'] || row['KELAS'] || 'Umum';
+                    
+                    if (namaLengkap !== '') {
+                        batch.push({
+                            namaLengkap: String(namaLengkap).trim(),
+                            namaPanggilan: String(namaPanggilan).trim(),
+                            kelas: String(kelas).trim()
+                        });
+                    }
+                });
+
+                if (batch.length === 0) {
+                    alert('Data tidak terbaca! Pastikan file Excel memuat kolom "Nama Lengkap" atau "Nama".');
+                    e.target.value = '';
+                    return;
+                }
+
+                showLoading(true);
+
+                fetch(SCRIPT_URL, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: "uploadBatchSantri", list: batch }) 
+                })
+                .then(() => {
+                    alert(`Berhasil mengunggah ${batch.length} data santri!`);
+                    e.target.value = '';
+                    loadDataPusat();
+                })
+                .catch(err => {
+                    alert(`Proses unggah selesai. Memperbarui data...`);
+                    e.target.value = '';
+                    loadDataPusat();
+                });
+
+            } catch (err) {
+                showLoading(false);
+                alert('Format file Excel salah atau file rusak: ' + err.message);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // 9. SIMPAN NILAI HARIAN
     document.getElementById('formNilai').addEventListener('submit', function(e) {
         e.preventDefault();
         const inputVal = document.getElementById('cariSantriInput').value;
+        
+        // Cari dari variabel global dataSiswa
         let santri = dataSiswa.find(s => `${s.namaPanggilan} - ${s.kelas}` === inputVal) || 
-                     dataSiswa.find(s => s.namaPanggilan.toLowerCase() === inputVal.toLowerCase());
+                     dataSiswa.find(s => (s.namaPanggilan || '').toLowerCase() === inputVal.toLowerCase());
 
         if (!santri) {
-            alert('Santri tidak ditemukan! Pilih dari daftar rekomendasi.');
+            alert('Santri tidak ditemukan! Pilih nama santri dari opsi dropdown rekomendasi.');
             return;
         }
 
@@ -319,18 +404,23 @@ document.getElementById('excelFile').addEventListener('change', function(e) {
             namaGuru: document.getElementById('namaGuru').value
         };
 
-        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
-            .then(() => {
-                document.getElementById('materi').value = '';
-                document.getElementById('nilai').value = '';
-                document.getElementById('catatanGuru').value = '';
-                document.getElementById('cariSantriInput').value = '';
-                loadDataPusat();
-            });
+        fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload) 
+        })
+        .then(() => {
+            document.getElementById('materi').value = '';
+            document.getElementById('nilai').value = '';
+            document.getElementById('catatanGuru').value = '';
+            document.getElementById('cariSantriInput').value = '';
+            loadDataPusat();
+        })
+        .catch(err => alert("Gagal mengirim nilai: " + err.message));
     });
 
-    // Jalankan saat pertama dibuka
-    loadDataPusat();
+    // JALANKAN OTOMATIS SAAT WEB DIBUKA
+    window.addEventListener('DOMContentLoaded', loadDataPusat);
 </script>
 </body>
 </html>
