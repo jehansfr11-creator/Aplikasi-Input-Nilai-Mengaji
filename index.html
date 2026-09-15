@@ -121,7 +121,7 @@
 
 <script>
     // PASTA LINK GOOGLE APPS SCRIPT KAMU DI SINI:
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwijtwadBYiuql2PoPnFbU36KYKLifOZiWUWsxsZLlJhUgrfZQvdzc2Eo1NNucC0spc/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz8lhC82I9hep3UAUwTTgfnz-RPsla7oPjfqL_Abfu9sE-OHQ89ARtxaIkhJR0rEPYB/exec";
 
     let dataSiswa = [];
     let dataNilai = [];
@@ -133,21 +133,24 @@
     }
 
     // LOAD DATA DARI GOOGLE SHEETS
-    function loadDataPusat() {
-        showLoading(true);
-        fetch(SCRIPT_URL)
-            .then(res => res.json())
-            .then(data => {
-                dataSiswa = data.santri || [];
-                dataNilai = data.nilai || [];
-                updateUI();
-                showLoading(false);
-            })
-            .catch(err => {
-                showLoading(false);
-                alert('Gagal mengambil data dari Google Sheets!');
-            });
-    }
+   function loadDataPusat() {
+    if (typeof showLoading === "function") showLoading(true);
+
+    fetch(SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+            if (typeof showLoading === "function") showLoading(false);
+
+            // Menampilkan data ke tabel Santri
+            if (data.santri && Array.isArray(data.santri)) {
+                renderTabelSantri(data.santri);
+            }
+        })
+        .catch(err => {
+            if (typeof showLoading === "function") showLoading(false);
+            console.error("Gagal mengambil data:", err);
+        });
+}
 
    // Fungsi untuk merender/menampilkan data santri ke dalam tabel HTML
 function renderTabelSantri(dataSantri) {
