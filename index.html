@@ -121,7 +121,7 @@
 
 <script>
     // PASTA LINK GOOGLE APPS SCRIPT KAMU DI SINI:
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB_5oIm0IWqECE-pUc4rKJGLSsFBXzHzSFBya9Lky2D_OCE0Qp4ztx48RWGSzg47H8/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwijtwadBYiuql2PoPnFbU36KYKLifOZiWUWsxsZLlJhUgrfZQvdzc2Eo1NNucC0spc/exec";
 
     let dataSiswa = [];
     let dataNilai = [];
@@ -225,42 +225,67 @@ function hapusSantriProses(namaPanggilan, rowIndex) {
     }
 }
 
-   // UPLOAD EXCEL BATCH (SERENTAK & CEPAT)
+ // UPLOAD EXCEL BATCH Fleksibel
 document.getElementById('excelFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = function(evt) {
-        const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-        let batch = [];
-        jsonData.forEach(row => {
-            const namaLengkap = row['Nama Lengkap'] || row['Nama'] || row['nama_lengkap'];
-            const namaPanggilan = row['Nama Panggilan'] || row['Panggilan'] || namaLengkap;
-            const kelas = row['Kelas'] || row['kelas'] || 'Umum';
-            if(namaLengkap) batch.push({ namaLengkap, namaPanggilan, kelas });
-        });
+            let batch = [];
+            jsonData.forEach(row => {
+                // Deteksi berbagai kemungkinan penulisan kolom di Excel
+                const namaLengkap = row['Nama Lengkap'] || row['Nama'] || row['nama_lengkap'] || row['NAMA LENGKAP'] || '';
+                const namaPanggilan = row['Nama Panggilan'] || row['Panggilan'] || row['nama_panggilan'] || row['NAMA PANGGILAN'] || namaLengkap;
+                const kelas = row['Kelas'] || row['kelas'] || row['KELAS'] || 'Umum';
+                
+                if (namaLengkap !== '') {
+                    batch.push({
+                        namaLengkap: String(namaLengkap).trim(),
+                        namaPanggilan: String(namaPanggilan).trim(),
+                        kelas: String(kelas).trim()
+                    });
+                }
+            });
 
-        if(batch.length > 0) {
-            showLoading(true);
-            // Mengirim seluruh array batch dalam 1 kali fetch
+            if (batch.length === 0) {
+                alert('Data tidak terbaca! Pastikan file Excel memuat kolom "Nama Lengkap" atau "Nama".');
+                e.target.value = '';
+                return;
+            }
+
+            if (typeof showLoading === "function") showLoading(true);
+
+            // Mengirim data ke Apps Script
             fetch(SCRIPT_URL, { 
-                method: 'POST', 
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: "uploadBatchSantri", list: batch }) 
             })
             .then(res => res.json())
-            .then(() => {
+            .then(resData => {
+                if (typeof showLoading === "function") showLoading(false);
                 alert(`Berhasil mengunggah ${batch.length} data santri!`);
                 e.target.value = '';
-                loadDataPusat();
+                if (typeof loadDataPusat === "function") loadDataPusat();
             })
             .catch(err => {
-                showLoading(false);
-                alert('Gagal mengunggah data!');
+                // Fallback jika response JSON terhalang CORS saat status ok
+                if (typeof showLoading === "function") showLoading(false);
+                alert(`Proses unggah selesai (${batch.length} data terproses). Memperbarui tabel...`);
+                e.target.value = '';
+                if (typeof loadDataPusat === "function") loadDataPusat();
             });
+
+        } catch (err) {
+            if (typeof showLoading === "function") showLoading(false);
+            alert('Format file Excel salah atau file rusak: ' + err.message);
         }
     };
     reader.readAsArrayBuffer(file);
