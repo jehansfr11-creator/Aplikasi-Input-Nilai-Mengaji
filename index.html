@@ -121,7 +121,7 @@
 
 <script>
     // PASTA LINK GOOGLE APPS SCRIPT KAMU DI SINI:
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4fNXKTVB-lKHYipaXji7snFm-MFyELfC0AQ8Fvbw2HwGMUzw_2aJTScQOPy6wPQ/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwB_5oIm0IWqECE-pUc4rKJGLSsFBXzHzSFBya9Lky2D_OCE0Qp4ztx48RWGSzg47H8/exec";
 
     let dataSiswa = [];
     let dataNilai = [];
@@ -149,58 +149,81 @@
             });
     }
 
-    function updateUI() {
-        // Render Tabel Santri
-        document.getElementById('santriCount').innerText = `Daftar Santri Terdaftar (${dataSiswa.length} anak)`;
-        const tabelSantri = document.getElementById('tabelSantri');
-        tabelSantri.innerHTML = '';
-        dataSiswa.forEach((s, idx) => {
-            tabelSantri.innerHTML += `<tr><td>${idx+1}</td><td>${s.namaLengkap}</td><td><b>${s.namaPanggilan}</b></td><td>${s.kelas}</td></tr>`;
-        });
+   // Fungsi untuk merender/menampilkan data santri ke dalam tabel HTML
+function renderTabelSantri(dataSantri) {
+    const tbody = document.querySelector('#tabelSantri tbody'); // Sesuaikan ID tabel santri Anda
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
 
-        // Datalist Auto-Complete
-        const datalist = document.getElementById('daftarSantriAuto');
-        datalist.innerHTML = '';
-        dataSiswa.forEach(s => {
-            datalist.innerHTML += `<option value="${s.namaPanggilan} - ${s.kelas}">[${s.namaLengkap}]</option>`;
-        });
+    dataSantri.forEach((santri, index) => {
+        // rowIndex di Google Sheets adalah index array + 2 (karena baris 1 adalah Header)
+        const sheetRowIndex = index + 1; 
 
-        // Render Tabel Nilai
-        const tabelNilai = document.getElementById('tabelNilai');
-        tabelNilai.innerHTML = '';
-        dataNilai.slice().reverse().forEach(n => {
-            const badgeClass = n.kategori === 'Tilawati' ? 'badge-tilawati' : 'badge-tahfidz';
-            tabelNilai.innerHTML += `
-                <tr>
-                    <td>${n.tanggal}</td>
-                    <td><b>${n.namaPanggilan}</b> (${n.kelas})</td>
-                    <td><span class="badge ${badgeClass}">${n.kategori}</span></td>
-                    <td>${n.materi}</td>
-                    <td><b>${n.nilai}</b></td>
-                    <td>${n.catatan || '-'}</td>
-                    <td>${n.namaGuru}</td>
-                </tr>
-            `;
-        });
-    }
-
-    // SIMPAN SANTRI MANUAL
-    document.getElementById('formSiswa').addEventListener('submit', function(e) {
-        e.preventDefault();
-        showLoading(true);
-        const payload = {
-            action: "simpanSantri",
-            namaLengkap: document.getElementById('namaLengkap').value,
-            namaPanggilan: document.getElementById('namaPanggilan').value,
-            kelas: document.getElementById('kelas').value
-        };
-        
-        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
-            .then(() => {
-                document.getElementById('formSiswa').reset();
-                loadDataPusat();
-            });
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${santri.namaLengkap || santri[0]}</td>
+            <td>${santri.namaPanggilan || santri[1]}</td>
+            <td>${santri.kelas || santri[2]}</td>
+            <td>
+                <button onclick="editSantriPrompt('${santri.namaLengkap || santri[0]}', '${santri.namaPanggilan || santri[1]}', '${santri.kelas || santri[2]}', ${sheetRowIndex})" class="btn-edit">Edit</button>
+                <button onclick="hapusSantriProses('${santri.namaPanggilan || santri[1]}', ${sheetRowIndex})" class="btn-hapus">Hapus</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
+}
+
+// Fungsi Edit Santri
+function editSantriPrompt(namaLengkap, namaPanggilan, kelas, rowIndex) {
+    const baruLengkap = prompt("Nama Lengkap:", namaLengkap);
+    if (!baruLengkap) return;
+    const baruPanggilan = prompt("Nama Panggilan:", namaPanggilan);
+    if (!baruPanggilan) return;
+    const baruKelas = prompt("Kelas:", kelas);
+    if (!baruKelas) return;
+
+    showLoading(true);
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+            action: "editSantri",
+            rowIndex: rowIndex,
+            oldPanggilan: namaPanggilan,
+            namaLengkap: baruLengkap,
+            namaPanggilan: baruPanggilan,
+            kelas: baruKelas
+        })
+    })
+    .then(() => {
+        alert("Data santri berhasil diperbarui!");
+        loadDataPusat();
+    })
+    .catch(err => alert("Gagal mengedit data: " + err.message));
+}
+
+// Fungsi Hapus Santri
+function hapusSantriProses(namaPanggilan, rowIndex) {
+    if (confirm(`Apakah Anda yakin ingin menghapus data santri "${namaPanggilan}"?`)) {
+        showLoading(true);
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: "hapusSantri",
+                rowIndex: rowIndex,
+                namaPanggilan: namaPanggilan
+            })
+        })
+        .then(() => {
+            alert("Data santri berhasil dihapus!");
+            loadDataPusat();
+        })
+        .catch(err => alert("Gagal menghapus data: " + err.message));
+    }
+}
 
    // UPLOAD EXCEL BATCH (SERENTAK & CEPAT)
 document.getElementById('excelFile').addEventListener('change', function(e) {
