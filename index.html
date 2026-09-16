@@ -53,6 +53,7 @@
         .table-scroll table { margin-top: 0; }
         #loadingStatus { background: #fef08a; color: #854d0e; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; text-align: center; display: none; font-weight: 600; }
         .search-box { margin-bottom: 12px; }
+        .action-btns { display: flex; align-items: center; gap: 4px; }
     </style>
 </head>
 <body>
@@ -195,7 +196,7 @@
                         <th style="width: 12%;">Adab & Konsentrasi</th>
                         <th>Catatan</th>
                         <th>Guru</th>
-                        <th style="width: 8%;">Aksi</th>
+                        <th style="width: 12%;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="tabelNilai"></tbody>
@@ -282,8 +283,10 @@
                 <td><b>${s.namaPanggilan}</b></td>
                 <td>${s.kelas}</td>
                 <td>
-                    <button onclick="editSantriPrompt('${s.namaLengkap}', '${s.namaPanggilan}', '${s.kelas}', ${sheetRowIndex})" class="btn-edit">Edit</button>
-                    <button onclick="hapusSantriProses('${s.namaPanggilan}', ${sheetRowIndex})" class="btn-hapus">Hapus</button>
+                    <div class="action-btns">
+                        <button onclick="editSantriPrompt('${s.namaLengkap}', '${s.namaPanggilan}', '${s.kelas}', ${sheetRowIndex})" class="btn-edit">Edit</button>
+                        <button onclick="hapusSantriProses('${s.namaPanggilan}', ${sheetRowIndex})" class="btn-hapus">Hapus</button>
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -328,6 +331,20 @@
             const badgeClass = kat === 'Tahfidz' ? 'badge-tahfidz' : 'badge-tilawati';
             const tr = document.createElement('tr');
 
+            // Menyimpan objek data ter-encode sebagai penanganan aman karakter khusus
+            const currentDataJson = encodeURIComponent(JSON.stringify({
+                tanggal: tgl,
+                namaPanggilan: nama,
+                kelas: kelas,
+                kategori: kat,
+                materi: materi,
+                nilai: nilai,
+                adab: adab,
+                konsentrasi: konsentrasi,
+                catatan: catatan,
+                namaGuru: guru
+            }));
+
             tr.innerHTML = `
                 <td>${tgl}</td>
                 <td><b>${nama}</b> (${kelas})</td>
@@ -341,7 +358,10 @@
                 <td>${catatan}</td>
                 <td>${guru}</td>
                 <td>
-                    <button onclick="hapusNilaiProses('${nama}', ${rowIndex})" class="btn-hapus">Hapus</button>
+                    <div class="action-btns">
+                        <button onclick="editNilaiPrompt('${currentDataJson}', ${rowIndex})" class="btn-edit">Edit</button>
+                        <button onclick="hapusNilaiProses('${nama}', ${rowIndex})" class="btn-hapus">Hapus</button>
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -458,6 +478,64 @@
         }
     }
 
+    // 8. EDIT NILAI HARIAN (FITUR BARU)
+    function editNilaiPrompt(dataJsonEncoded, rowIndex) {
+        const item = JSON.parse(decodeURIComponent(dataJsonEncoded));
+
+        const baruKategori = prompt("Edit Kategori (Tilawati/Tahfidz):", item.kategori);
+        if (baruKategori === null) return;
+
+        const baruMateri = prompt("Edit Materi / Ayat:", item.materi);
+        if (baruMateri === null) return;
+
+        const baruNilai = prompt("Edit Nilai:", item.nilai);
+        if (baruNilai === null) return;
+
+        const baruAdab = prompt("Edit Adab (Sangat Baik/Baik/Cukup/Kurang):", item.adab);
+        if (baruAdab === null) return;
+
+        const baruKonsentrasi = prompt("Edit Konsentrasi (Sangat Baik/Baik/Cukup/Kurang):", item.konsentrasi);
+        if (baruKonsentrasi === null) return;
+
+        const baruCatatan = prompt("Edit Catatan Guru:", item.catatan);
+        if (baruCatatan === null) return;
+
+        const baruGuru = prompt("Edit Nama Guru:", item.namaGuru);
+        if (baruGuru === null) return;
+
+        showLoading(true);
+
+        const payload = {
+            action: "editNilai",
+            rowIndex: rowIndex,
+            tanggal: item.tanggal,
+            namaPanggilan: item.namaPanggilan,
+            kelas: item.kelas,
+            kategori: baruKategori.trim(),
+            materi: baruMateri.trim(),
+            nilai: baruNilai.trim(),
+            adab: baruAdab.trim(),
+            konsentrasi: baruKonsentrasi.trim(),
+            catatan: baruCatatan.trim(),
+            namaGuru: baruGuru.trim()
+        };
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(() => {
+            alert("Nilai harian berhasil diperbarui!");
+            loadDataPusat();
+        })
+        .catch(err => {
+            showLoading(false);
+            alert("Gagal memperbarui nilai: " + err.message);
+        });
+    }
+
     // HAPUS NILAI HARIAN
     function hapusNilaiProses(namaSantri, rowIndex) {
         if (confirm(`Hapus catatan nilai untuk ${namaSantri}?`)) {
@@ -482,7 +560,7 @@
         }
     }
 
-    // 8. UPLOAD BATCH EXCEL
+    // 9. UPLOAD BATCH EXCEL
     document.getElementById('excelFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -543,7 +621,7 @@
         reader.readAsArrayBuffer(file);
     });
 
-    // 9. SIMPAN NILAI HARIAN
+    // 10. SIMPAN NILAI HARIAN
     document.getElementById('formNilai').addEventListener('submit', function(e) {
         e.preventDefault();
         const inputVal = document.getElementById('cariSantriInput').value.trim().toLowerCase();
