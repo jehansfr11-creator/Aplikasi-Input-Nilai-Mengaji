@@ -76,7 +76,13 @@
         <div class="table-scroll" style="margin-top: 8px;">
             <table>
                 <thead>
-                    <tr><th style="width: 5%;">No</th><th>Nama Lengkap</th><th>Nama Panggilan</th><th style="width: 15%;">Kelas</th><th style="width: 15%;">Aksi</th></tr>
+                    <tr>
+                        <th style="width: 5%;">No</th>
+                        <th>Nama Lengkap</th>
+                        <th>Nama Panggilan</th>
+                        <th style="width: 15%;">Kelas</th>
+                        <th style="width: 15%;">Aksi</th>
+                    </tr>
                 </thead>
                 <tbody id="tabelSantri"></tbody>
             </table>
@@ -88,9 +94,18 @@
         <div class="card card-left">
             <h3>Tambah Santri Manual</h3>
             <form id="formSiswa">
-                <div class="form-group"><label>Nama Lengkap:</label><input type="text" id="namaLengkap" placeholder="Ahmad Fuadi" required></div>
-                <div class="form-group"><label>Nama Panggilan:</label><input type="text" id="namaPanggilan" placeholder="Fuad" required></div>
-                <div class="form-group"><label>Kelas:</label><input type="text" id="kelas" placeholder="4B" required></div>
+                <div class="form-group">
+                    <label>Nama Lengkap:</label>
+                    <input type="text" id="namaLengkap" placeholder="Ahmad Fuadi" required>
+                </div>
+                <div class="form-group">
+                    <label>Nama Panggilan:</label>
+                    <input type="text" id="namaPanggilan" placeholder="Fuad" required>
+                </div>
+                <div class="form-group">
+                    <label>Kelas:</label>
+                    <input type="text" id="kelas" placeholder="4B" required>
+                </div>
                 <button type="submit" id="btnSimpanSantri" class="btn btn-block">Simpan Santri</button>
             </form>
         </div>
@@ -105,7 +120,10 @@
                         <input type="text" id="cariSantriInput" list="daftarSantriAuto" placeholder="Ketik nama panggilan / lengkap..." autocomplete="off" required>
                         <datalist id="daftarSantriAuto"></datalist>
                     </div>
-                    <div class="form-group"><label>Tanggal:</label><input type="date" id="tanggal" required></div>
+                    <div class="form-group">
+                        <label>Tanggal:</label>
+                        <input type="date" id="tanggal" required>
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -115,32 +133,45 @@
                             <option value="Tahfidz">Tahfidz</option>
                         </select>
                     </div>
-                    <div class="form-group"><label>Materi / Ayat:</label><input type="text" id="materi" placeholder="Jilid 3 Hal 12 / An-Naba 1-10" required></div>
-                    <div class="form-group"><label>Nilai:</label><input type="text" id="nilai" placeholder="Lancar / A / Jayyid" required></div>
+                    <div class="form-group">
+                        <label>Materi / Ayat:</label>
+                        <input type="text" id="materi" placeholder="Jilid 3 Hal 12 / An-Naba 1-10" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nilai:</label>
+                        <input type="text" id="nilai" placeholder="Lancar / A / Jayyid" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="adab">Adab Membaca Al-Qur'an:</label>
+                        <select id="adab" name="adab" required>
+                            <option value="">-- Pilih Adab --</option>
+                            <option value="Sangat Baik">Sangat Baik</option>
+                            <option value="Baik">Baik</option>
+                            <option value="Cukup">Cukup</option>
+                            <option value="Kurang">Kurang</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="konsentrasi">Konsentrasi:</label>
+                        <select id="konsentrasi" name="konsentrasi" required>
+                            <option value="">-- Pilih Konsentrasi --</option>
+                            <option value="Sangat Baik">Sangat Baik</option>
+                            <option value="Baik">Baik</option>
+                            <option value="Cukup">Cukup</option>
+                            <option value="Kurang">Kurang</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
-  <label for="adab">Adab Membaca Al-Qur'an:</label>
-  <select id="adab" name="adab" required>
-    <option value="">-- Pilih Adab --</option>
-    <option value="Sangat Baik">Sangat Baik</option>
-    <option value="Baik">Baik</option>
-    <option value="Cukup">Cukup</option>
-    <option value="Kurang">Kurang</option>
-  </select>
-</div>
-
-<div class="form-group">
-  <label for="konsentrasi">Konsentrasi:</label>
-  <select id="konsentrasi" name="konsentrasi" required>
-    <option value="">-- Pilih Konsentrasi --</option>
-    <option value="Sangat Baik">Sangat Baik</option>
-    <option value="Baik">Baik</option>
-    <option value="Cukup">Cukup</option>
-    <option value="Kurang">Kurang</option>
-  </select>
-</div>
-                <div class="form-group"><label>Nama Guru:</label><input type="text" id="namaGuru" placeholder="Ust. Abdullah" required></div>
-                <div class="form-group"><label>Catatan Guru:</label><textarea id="catatanGuru" rows="2" placeholder="Tingkatkan makhraj huruf Raa..."></textarea></div>
+                    <label>Nama Guru:</label>
+                    <input type="text" id="namaGuru" placeholder="Ust. Abdullah" required>
+                </div>
+                <div class="form-group">
+                    <label>Catatan Guru:</label>
+                    <textarea id="catatanGuru" rows="2" placeholder="Tingkatkan makhraj huruf Raa..."></textarea>
+                </div>
                 <button type="submit" id="btnSimpanNilai" class="btn btn-block">Kirim Nilai Harian</button>
             </form>
         </div>
@@ -160,7 +191,8 @@
                         <th>Nama Santri (Kelas)</th>
                         <th style="width: 10%;">Kategori</th>
                         <th>Materi</th>
-                        <th style="width: 10%;">Nilai</th>
+                        <th style="width: 8%;">Nilai</th>
+                        <th style="width: 12%;">Adab & Konsentrasi</th>
                         <th>Catatan</th>
                         <th>Guru</th>
                         <th style="width: 8%;">Aksi</th>
@@ -173,7 +205,6 @@
 </div>
 
 <script>
-    // MASUKKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwp_H18pIXoyIXDfWaVsITulL-9FRc0s4_DWQJMQP2REIRg2eMSnJy70HS_xWjf4pRA/exec";
 
     let dataSiswa = [];
@@ -188,7 +219,7 @@
         buttons.forEach(btn => btn.disabled = show);
     }
 
-    // Normalisasi struktur data santri (baik format Array maupun Object)
+    // Normalisasi struktur data santri
     function getSantriProp(s) {
         if (!s) return { namaLengkap: '', namaPanggilan: '', kelas: 'Umum' };
         if (Array.isArray(s)) {
@@ -266,11 +297,10 @@
 
         tbody.innerHTML = '';
         if (nilaiList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Belum ada riwayat nilai</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Belum ada riwayat nilai</td></tr>';
             return;
         }
 
-        // Simpan index row asli Sheet sebelum di-reverse agar opsi Hapus bekerja tepat sasaran
         const mappedList = nilaiList.map((item, index) => ({
             data: item,
             sheetRowIndex: index + 2
@@ -286,8 +316,10 @@
             let kat = n.kategori || n[3] || 'Tilawati';
             let materi = n.materi || n[4] || '-';
             let nilai = n.nilai || n[5] || '-';
-            let catatan = n.catatan || n[6] || '-';
-            let guru = n.namaGuru || n[7] || '-';
+            let adab = n.adab || n[6] || '-';
+            let konsentrasi = n.konsentrasi || n[7] || '-';
+            let catatan = n.catatan || n[8] || '-';
+            let guru = n.namaGuru || n[9] || '-';
 
             if (tgl.includes('T')) {
                 tgl = tgl.split('T')[0];
@@ -302,6 +334,10 @@
                 <td><span class="badge ${badgeClass}">${kat}</span></td>
                 <td>${materi}</td>
                 <td><b>${nilai}</b></td>
+                <td>
+                    <small><b>Adab:</b> ${adab}</small><br>
+                    <small><b>Fokus:</b> ${konsentrasi}</small>
+                </td>
                 <td>${catatan}</td>
                 <td>${guru}</td>
                 <td>
@@ -527,7 +563,6 @@
             }
         }
 
-        // Pencarian opsional jika pencocokan fleksibel
         if (!targetSantri) {
             targetSantri = dataSiswa.map(getSantriProp).find(s => 
                 inputVal.includes(s.namaPanggilan.toLowerCase()) || 
@@ -549,6 +584,8 @@
             kategori: document.getElementById('kategori').value,
             materi: document.getElementById('materi').value.trim(),
             nilai: document.getElementById('nilai').value.trim(),
+            adab: document.getElementById('adab').value,
+            konsentrasi: document.getElementById('konsentrasi').value,
             catatan: document.getElementById('catatanGuru').value.trim(),
             namaGuru: document.getElementById('namaGuru').value.trim()
         };
@@ -560,8 +597,11 @@
         })
         .then(res => res.json())
         .then(() => {
+            alert('Nilai harian berhasil dikirim!');
             document.getElementById('materi').value = '';
             document.getElementById('nilai').value = '';
+            document.getElementById('adab').value = '';
+            document.getElementById('konsentrasi').value = '';
             document.getElementById('catatanGuru').value = '';
             document.getElementById('cariSantriInput').value = '';
             loadDataPusat();
